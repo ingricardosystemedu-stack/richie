@@ -1,0 +1,292 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Dashboard de Ventas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: filter bar on top, KPI strip, then a 12-column grid of charts (month + map, then vendedor / categoría / rango de ticket) */
+:root{
+  --bg:#EEF2F1; --surface:#FFFFFF; --ink:#12201E; --muted:#5B6B68; --line:#DAE2E0;
+  --accent:#0E7C70; --accent-soft:#D6EEEA; --warn:#C2410C;
+  --r1:#CFEBE6; --r2:#8FD0C6; --r3:#4BB1A3; --r4:#12877A; --r5:#0A4F48;
+  --none:#E6ECEA; --shadow:0 1px 2px rgba(18,32,30,.06),0 6px 20px rgba(18,32,30,.05);
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'Manrope','Segoe UI',system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1514; --surface:#152120; --ink:#E5EFEC; --muted:#8FA29E; --line:#243634;
+  --accent:#3CC9B6; --accent-soft:#1B3A36; --warn:#FB923C;
+  --r1:#1C3F3A; --r2:#1F6B62; --r3:#2A9A8D; --r4:#43C2B2; --r5:#8DE3D6;
+  --none:#1B2928; --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1514; --surface:#152120; --ink:#E5EFEC; --muted:#8FA29E; --line:#243634;
+  --accent:#3CC9B6; --accent-soft:#1B3A36; --warn:#FB923C;
+  --r1:#1C3F3A; --r2:#1F6B62; --r3:#2A9A8D; --r4:#43C2B2; --r5:#8DE3D6;
+  --none:#1B2928; --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-block:24px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-size:clamp(26px,4vw,38px);line-height:1.05;margin:0;letter-spacing:-.02em;text-wrap:balance}
+.sub{color:var(--muted);margin:6px 0 0}
+button{font:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.reset{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:8px 14px;border-radius:8px;font-weight:600}
+.reset:hover{border-color:var(--accent);color:var(--accent)}
+.reset[disabled]{opacity:.45;cursor:default}
+.filters{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 20px}
+.fg{min-width:0}
+.fg label,.lbl{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:4px 11px;font-size:12.5px;font-weight:500}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.range{display:flex;gap:8px;align-items:center}
+select{font:inherit;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 8px;min-width:0;flex:1}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kpi{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;min-width:0}
+.kpi .v{font-family:var(--f-display);font-size:clamp(24px,3vw,32px);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:4px}
+.kpi.main .v{color:var(--accent)}
+.kpi .n{color:var(--muted);font-size:12px;margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:16px 18px;min-width:0;display:flex;flex-direction:column}
+.card h2{font-family:var(--f-display);font-size:17px;margin:0 0 2px;letter-spacing:-.01em}
+.card .hint{color:var(--muted);font-size:12px;margin:0 0 10px}
+.c7{grid-column:span 7}.c5{grid-column:span 5}.c4{grid-column:span 4}
+svg{display:block;width:100%;height:auto;overflow:visible}
+.t{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.tv{fill:var(--ink);font-size:11px;font-weight:600;font-family:var(--f-body);font-variant-numeric:tabular-nums}
+.grd{stroke:var(--line);stroke-width:1}
+.bar{cursor:pointer;transition:opacity .15s}
+.bar:hover{opacity:.8}
+.tile{cursor:default}
+.tile.has{cursor:pointer}
+.tile.has:hover rect{stroke:var(--ink)}
+.legend{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:12.5px}
+.legend div{display:grid;grid-template-columns:12px 1fr auto auto;gap:8px;align-items:center}
+.legend i{width:12px;height:12px;border-radius:3px;display:block}
+.legend .pct{color:var(--muted);font-variant-numeric:tabular-nums;min-width:38px;text-align:right}
+.legend b{font-variant-numeric:tabular-nums;font-weight:600}
+.mapnote{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11.5px;margin-top:8px}
+.ramp{height:8px;width:90px;border-radius:4px;background:linear-gradient(90deg,var(--r1),var(--r5))}
+#tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:8px;font-size:12px;line-height:1.35;box-shadow:0 4px 14px rgba(0,0,0,.25);opacity:0;transition:opacity .1s;max-width:240px}
+.empty{color:var(--muted);padding:30px 0;text-align:center}
+@media (max-width:980px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.c7,.c5,.c4{grid-column:span 12}}
+@media (max-width:520px){.filters{grid-template-columns:minmax(0,1fr)}.card,.kpi{padding:14px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>📊 Dashboard de Ventas</h1>
+      <p class="sub" id="sub"></p>
+    </div>
+    <button class="reset" id="reset" type="button">🧹 Limpiar filtros</button>
+  </header>
+
+  <section class="filters" aria-label="Filtros">
+    <div class="fg"><label>🧑‍💼 Vendedor</label><div class="chips" id="f-v"></div></div>
+    <div class="fg"><label>🧭 Región</label><div class="chips" id="f-r"></div></div>
+    <div class="fg"><label>🏷️ Categoría</label><div class="chips" id="f-c"></div></div>
+    <div class="fg"><label for="m-from">📅 Periodo</label>
+      <div class="range"><select id="m-from"></select><span class="t">a</span><select id="m-to"></select></div></div>
+  </section>
+
+  <section class="kpis" id="kpis"></section>
+
+  <section class="grid">
+    <div class="card c7"><h2>📈 Ventas totales por mes</h2><p class="hint">Ingresos mensuales en pesos mexicanos</p><div id="ch-month"></div></div>
+    <div class="card c5"><h2>🗺️ Ventas por estado</h2><p class="hint">Toca un estado para filtrar</p><div id="ch-map"></div>
+      <div class="mapnote"><span>❄️ Menos</span><span class="ramp"></span><span>Más ventas 🔥</span></div></div>
+    <div class="card c4"><h2>🧑‍💼 Ventas por vendedor</h2><p class="hint">Toca una barra para filtrar</p><div id="ch-vend"></div></div>
+    <div class="card c4"><h2>🛍️ Ventas por categoría</h2><p class="hint">Toca una barra para filtrar</p><div id="ch-cat"></div></div>
+    <div class="card c4"><h2>🍩 Ticket promedio</h2><p class="hint">Ventas según el monto del pedido</p><div id="ch-ticket"></div></div>
+  </section>
+</div>
+<div id="tip" role="status"></div>
+
+<script>
+const DATA = [{"f":"2024-12-16","e":"Chihuahua","v":"Carlos Mendoza","r":"Sur","c":"Accesorios","p":"Teclado Mecánico Keychron K2","q":2,"i":3726.24},{"f":"2024-11-10","e":"Yucatán","v":"Alejandro Torres","r":"Norte","c":"Laptops","p":"MacBook Pro 16\"","q":5,"i":141282.35},{"f":"2025-04-06","e":"Jalisco","v":"Jimena Acuña","r":"Sur","c":"Laptops","p":"HP Spectre x360","q":4,"i":92482.0},{"f":"2025-07-31","e":"Guanajuato","v":"Jimena Acuña","r":"Centro","c":"Laptops","p":"Laptop Dell XPS 15","q":2,"i":61998.24},{"f":"2025-07-30","e":"Guanajuato","v":"Carlos Mendoza","r":"Sur","c":"Software","p":"Adobe Creative Cloud","q":3,"i":13267.05},{"f":"2025-06-03","e":"Nuevo León","v":"Hilda Paredes","r":"Occidente","c":"Accesorios","p":"Teclado Mecánico Keychron K2","q":1,"i":1465.8},{"f":"2024-10-01","e":"Jalisco","v":"Carlos Mendoza","r":"Centro","c":"Software","p":"Licencia Microsoft Office 365","q":4,"i":17104.04},{"f":"2025-03-11","e":"Guanajuato","v":"Jimena Acuña","r":"Occidente","c":"Accesorios","p":"Audífonos Sony WH-1000XM5","q":1,"i":2186.33},{"f":"2025-01-20","e":"Guanajuato","v":"Jimena Acuña","r":"Occidente","c":"Software","p":"Adobe Creative Cloud","q":1,"i":1678.57},{"f":"2025-06-16","e":"Guanajuato","v":"Hilda Paredes","r":"Occidente","c":"Accesorios","p":"Teclado Mecánico Keychron K2","q":2,"i":2783.3},{"f":"2025-02-08","e":"Nuevo León","v":"Hilda Paredes","r":"Centro","c":"Accesorios","p":"Audífonos Sony WH-1000XM5","q":1,"i":2346.27},{"f":"2025-05-29","e":"Chihuahua","v":"Carlos Mendoza","r":"Centro","c":"Smartphones","p":"Google Pixel 9","q":3,"i":70501.11},{"f":"2024-11-08","e":"Baja California","v":"Jimena Acuña","r":"Norte","c":"Laptops","p":"MacBook Pro 16\"","q":4,"i":90069.76},{"f":"2025-07-02","e":"Baja California","v":"Hilda Paredes","r":"Occidente","c":"Accesorios","p":"Monitor LG UltraGear 27\"","q":4,"i":18278.6},{"f":"2025-03-16","e":"Yucatán","v":"Hilda Paredes","r":"Occidente","c":"Smartphones","p":"Samsung Galaxy S25","q":3,"i":89223.99},{"f":"2024-12-16","e":"Guanajuato","v":"Hilda Paredes","r":"Sur","c":"Laptops","p":"HP Spectre x360","q":4,"i":113476.96},{"f":"2024-10-27","e":"Guanajuato","v":"Hilda Paredes","r":"Norte","c":"Accesorios","p":"Audífonos Sony WH-1000XM5","q":1,"i":1038.07},{"f":"2025-08-05","e":"Chihuahua","v":"Jimena Acuña","r":"Occidente","c":"Software","p":"Adobe Creative Cloud","q":3,"i":10404.9},{"f":"2025-08-12","e":"Chihuahua","v":"Jimena Acuña","r":"Occidente","c":"Componentes","p":"SSD Samsung 980 Pro 2TB","q":4,"i":13476.84},{"f":"2025-02-08","e":"Nuevo León","v":"Carlos Mendoza","r":"Centro","c":"Software","p":"Windows 11 Pro","q":4,"i":25049.36},{"f":"2025-03-04","e":"Puebla","v":"Hilda Paredes","r":"Occidente","c":"Laptops","p":"HP Spectre x360","q":2,"i":43043.22},{"f":"2024-11-28","e":"Puebla","v":"Hilda Paredes","r":"Sur","c":"Accesorios","p":"Audífonos Sony WH-1000XM5","q":5,"i":16471.7},{"f":"2024-09-16","e":"Ciudad de México","v":"Jimena Acuña","r":"Norte","c":"Laptops","p":"HP Spectre x360","q":5,"i":94995.95},{"f":"2025-02-06","e":"Jalisco","v":"Hilda Paredes","r":"Norte","c":"Laptops","p":"MacBook Pro 16\"","q":4,"i":69391.2},{"f":"2024-11-06","e":"Puebla","v":"Hilda Paredes","r":"Sur","c":"Accesorios","p":"Teclado Mecánico Keychron K2","q":4,"i":12279.84},{"f":"2025-06-15","e":"Baja California","v":"Hilda Paredes","r":"Occidente","c":"Laptops","p":"Laptop Dell XPS 15","q":3,"i":76147.62},{"f":"2024-10-27","e":"Ciudad de México","v":"Jimena Acuña","r":"Centro","c":"Componentes","p":"Procesador Intel Core i9-14900K","q":2,"i":28303.6},{"f":"2025-04-01","e":"Yucatán","v":"Jimena Acuña","r":"Norte","c":"Software","p":"Adobe Creative Cloud","q":4,"i":23930.16},{"f":"2025-02-03","e":"Chihuahua","v":"Carlos Mendoza","r":"Centro","c":"Software","p":"Windows 11 Pro","q":4,"i":28323.92},{"f":"2025-04-02","e":"Guanajuato","v":"Hilda Paredes","r":"Norte","c":"Componentes","p":"Tarjeta Gráfica NVIDIA RTX 4080","q":4,"i":53685.4},{"f":"2025-03-27","e":"Ciudad de México","v":"Hilda Paredes","r":"Norte","c":"Smartphones","p":"Samsung Galaxy S25","q":2,"i":36073.04},{"f":"2024-08-31","e":"Yucatán","v":"Hilda Paredes","r":"Norte","c":"Componentes","p":"Procesador Intel Core i9-14900K","q":1,"i":7750.2},{"f":"2025-06-08","e":"Yucatán","v":"Jimena Acuña","r":"Occidente","c":"Accesorios","p":"Teclado Mecánico Keychron K2","q":1,"i":699.03},{"f":"2025-01-25","e":"Guanajuato","v":"Hilda Paredes","r":"Centro","c":"Accesorios","p":"Mouse Logitech MX Master 3","q":1,"i":2301.51},{"f":"2024-10-05","e":"Yucatán","v":"Hilda Paredes","r":"Occidente","c":"Software","p":"Adobe Creative Cloud","q":2,"i":14398.12},{"f":"2025-01-11","e":"Chihuahua","v":"Alejandro Torres","r":"Sur","c":"Accesorios","p":"Audífonos Sony WH-1000XM5","q":2,"i":4354.18},{"f":"2025-06-30","e":"Guanajuato","v":"Jimena Acuña","r":"Sur","c":"Smartphones","p":"iPhone 15 Pro","q":4,"i":47888.44},{"f":"2024-09-14","e":"Ciudad de México","v":"Jimena Acuña","r":"Norte","c":"Accesorios","p":"Audífonos Sony WH-1000XM5","q":2,"i":2833.52},{"f":"2024-09-09","e":"Yucatán","v":"Alejandro Torres","r":"Norte","c":"Accesorios","p":"Mouse Logitech MX Master 3","q":5,"i":7038.8},{"f":"2025-08-12","e":"Ciudad de México","v":"Alejandro Torres","r":"Norte","c":"Software","p":"Windows 11 Pro","q":4,"i":27560.4},{"f":"2024-12-30","e":"Jalisco","v":"Alejandro Torres","r":"Norte","c":"Laptops","p":"Laptop Dell XPS 15","q":1,"i":32159.72},{"f":"2025-03-11","e":"Ciudad de México","v":"Jimena Acuña","r":"Sur","c":"Software","p":"Adobe Creative Cloud","q":3,"i":22997.22},{"f":"2024-11-01","e":"Chihuahua","v":"Hilda Paredes","r":"Occidente","c":"Accesorios","p":"Mouse Logitech MX Master 3","q":2,"i":8521.0},{"f":"2024-11-23","e":"Guanajuato","v":"Hilda Paredes","r":"Sur","c":"Laptops","p":"Lenovo ThinkPad X1 Carbon","q":1,"i":36918.91},{"f":"2025-05-11","e":"Nuevo León","v":"Alejandro Torres","r":"Norte","c":"Smartphones","p":"Samsung Galaxy S25","q":2,"i":39779.14},{"f":"2024-09-20","e":"Jalisco","v":"Hilda Paredes","r":"Norte","c":"Smartphones","p":"Samsung Galaxy S25","q":4,"i":59385.48},{"f":"2025-06-11","e":"Yucatán","v":"Hilda Paredes","r":"Sur","c":"Software","p":"Antivirus Norton 360","q":5,"i":13458.3},{"f":"2024-12-30","e":"Ciudad de México","v":"Alejandro Torres","r":"Sur","c":"Accesorios","p":"Mouse Logitech MX Master 3","q":2,"i":5214.82},{"f":"2025-01-31","e":"Yucatán","v":"Jimena Acuña","r":"Norte","c":"Software","p":"Licencia Microsoft Office 365","q":5,"i":35352.75},{"f":"2025-03-21","e":"Yucatán","v":"Alejandro Torres","r":"Centro","c":"Laptops","p":"Laptop Dell XPS 15","q":4,"i":72477.44},{"f":"2025-03-20","e":"Nuevo León","v":"Hilda Paredes","r":"Occidente","c":"Accesorios","p":"Mouse Logitech MX Master 3","q":3,"i":11303.94},{"f":"2024-12-12","e":"Baja California","v":"Jimena Acuña","r":"Sur","c":"Componentes","p":"Memoria RAM Corsair Vengeance 32GB","q":5,"i":80825.3},{"f":"2025-08-19","e":"Ciudad de México","v":"Jimena Acuña","r":"Centro","c":"Accesorios","p":"Monitor LG UltraGear 27\"","q":3,"i":13731.75},{"f":"2025-02-20","e":"Jalisco","v":"Jimena Acuña","r":"Occidente","c":"Accesorios","p":"Monitor LG UltraGear 27\"","q":3,"i":13910.31},{"f":"2024-10-14","e":"Baja California","v":"Alejandro Torres","r":"Occidente","c":"Componentes","p":"Memoria RAM Corsair Vengeance 32GB","q":4,"i":31883.16},{"f":"2024-12-10","e":"Nuevo León","v":"Hilda Paredes","r":"Sur","c":"Componentes","p":"Tarjeta Gráfica NVIDIA RTX 4080","q":1,"i":11369.77},{"f":"2025-04-08","e":"Chihuahua","v":"Hilda Paredes","r":"Sur","c":"Software","p":"Windows 11 Pro","q":3,"i":19945.77},{"f":"2025-01-27","e":"Ciudad de México","v":"Alejandro Torres","r":"Norte","c":"Smartphones","p":"Xiaomi 14","q":3,"i":73501.17},{"f":"2024-12-26","e":"Baja California","v":"Jimena Acuña","r":"Centro","c":"Componentes","p":"SSD Samsung 980 Pro 2TB","q":1,"i":17572.36},{"f":"2025-06-22","e":"Jalisco","v":"Hilda Paredes","r":"Centro","c":"Componentes","p":"Procesador Intel Core i9-14900K","q":4,"i":46753.52}];
+const MES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const ym = f => f.slice(0,7);
+const months = [...new Set(DATA.map(d=>ym(d.f)))].sort();
+const mLabel = k => MES[+k.slice(5,7)-1] + ' ' + k.slice(2,4);
+const mLong  = k => MES[+k.slice(5,7)-1] + ' ' + k.slice(0,4);
+DATA.forEach(d=>d.m=ym(d.f));
+
+const peso = n => n.toLocaleString('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0});
+const short = n => n>=1e6 ? '$'+(n/1e6).toFixed(2)+' M' : n>=1e3 ? '$'+Math.round(n/1e3)+' mil' : '$'+Math.round(n);
+const axisLbl = n => n===0 ? '$0' : n>=1e6 ? '$'+(n/1e6)+' M' : '$'+(n/1e3)+' mil';
+const CAT_ICO={Accesorios:'🎧',Componentes:'🔧',Laptops:'💻',Smartphones:'📱',Software:'💿'};
+const VEN_ICO=['🥇','🥈','🥉','🎖️'];
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const DIMS = {v:'Vendedor', r:'Región', c:'Categoría', e:'Estado'};
+const sel = {v:new Set(), r:new Set(), c:new Set(), e:new Set()};
+let from = 0, to = months.length-1;
+
+const uniq = k => [...new Set(DATA.map(d=>d[k]))].sort((a,b)=>a.localeCompare(b,'es'));
+const sum = (rows,f='i') => rows.reduce((a,d)=>a+d[f],0);
+
+function rowsFor(skip){
+  return DATA.filter(d=>{
+    for (const k of ['v','r','c','e']) if (k!==skip && sel[k].size && !sel[k].has(d[k])) return false;
+    if (skip!=='m'){ const i=months.indexOf(d.m); if (i<from||i>to) return false; }
+    return true;
+  });
+}
+function toggle(k,val){ sel[k].has(val) ? sel[k].delete(val) : sel[k].add(val); render(); }
+
+/* tooltip */
+const tipEl = document.getElementById('tip');
+function tip(ev,html){
+  tipEl.innerHTML = html; tipEl.style.opacity = 1;
+  const w = tipEl.offsetWidth, h = tipEl.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY - h - 10;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y < 8) y = ev.clientY + 16;
+  tipEl.style.left = Math.max(8,x)+'px'; tipEl.style.top = y+'px';
+}
+const untip = () => tipEl.style.opacity = 0;
+function bindTip(root){
+  root.querySelectorAll('[data-tip]').forEach(el=>{
+    el.addEventListener('pointermove',e=>tip(e,el.dataset.tip));
+    el.addEventListener('pointerleave',untip);
+  });
+}
+function bindClicks(root){
+  root.querySelectorAll('[data-k]').forEach(el=>el.addEventListener('click',()=>{ untip(); toggle(el.dataset.k, el.dataset.val); }));
+}
+
+/* filters UI */
+function buildFilters(){
+  [['f-v','v'],['f-r','r'],['f-c','c']].forEach(([id,k])=>{
+    const box = document.getElementById(id);
+    box.innerHTML = uniq(k).map(v=>`<button type="button" class="chip" data-k="${k}" data-val="${esc(v)}" aria-pressed="false">${k==='c'?CAT_ICO[v]+' ':''}${esc(v)}</button>`).join('');
+    bindClicks(box);
+  });
+  const opts = months.map((m,i)=>`<option value="${i}">${mLong(m)}</option>`).join('');
+  const a = document.getElementById('m-from'), b = document.getElementById('m-to');
+  a.innerHTML = opts; b.innerHTML = opts; b.value = to;
+  a.onchange = ()=>{ from=+a.value; if(from>to){to=from;b.value=to;} render(); };
+  b.onchange = ()=>{ to=+b.value; if(to<from){from=to;a.value=from;} render(); };
+  document.getElementById('reset').onclick = ()=>{
+    Object.values(sel).forEach(s=>s.clear()); from=0; to=months.length-1; a.value=from; b.value=to; render();
+  };
+}
+
+function niceMax(v){
+  const p = Math.pow(10, Math.floor(Math.log10(v||1))); const n = v/p;
+  const m = n<=1?1: n<=2?2: n<=2.5?2.5: n<=5?5:10; return m*p;
+}
+
+/* KPIs */
+function renderKpis(rows){
+  const tot = sum(rows), n = rows.length, u = sum(rows,'q');
+  const top = rows.length ? Object.entries(rows.reduce((o,d)=>(o[d.p]=(o[d.p]||0)+d.i,o),{})).sort((a,b)=>b[1]-a[1])[0] : null;
+  const items = [
+    ['main','💰 Ingresos totales', rows.length?peso(tot):'$0', `${rows.length?(tot/sum(DATA)*100).toFixed(0):0}% del total histórico`],
+    ['','📦 Pedidos', n, `${u} unidades vendidas 🚀`],
+    ['','🎟️ Ticket promedio', n?peso(tot/n):'$0', 'Ingreso por pedido'],
+    ['','🏆 Producto líder', top?esc(top[0]):'—', top?`${short(top[1])} en ingresos`:'Sin datos'],
+  ];
+  document.getElementById('kpis').innerHTML = items.map(([c,l,v,n])=>
+    `<div class="kpi ${c}"><div class="lbl" style="margin:0">${l}</div><div class="v" ${l.includes('Producto líder')?'style="font-size:clamp(16px,1.9vw,20px);line-height:1.25;padding-top:6px"':''}>${v}</div><div class="n">${n}</div></div>`).join('');
+}
+
+/* Monthly columns */
+function renderMonth(){
+  const rows = rowsFor('m');
+  const vals = months.map(m=>sum(rows.filter(d=>d.m===m)));
+  const W=640,H=270,L=52,R=8,T=18,B=30, iw=W-L-R, ih=H-T-B;
+  const mx = niceMax(Math.max(...vals,1)), step = iw/months.length, bw = Math.min(34, step*.66);
+  const peakI = vals.indexOf(Math.max(...vals));
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ventas totales por mes">`;
+  for(let k=0;k<=4;k++){ const y=T+ih-ih*k/4;
+    s+=`<line class="grd" x1="${L}" x2="${W-R}" y1="${y}" y2="${y}"/><text class="t" x="${L-8}" y="${y+4}" text-anchor="end">${axisLbl(mx*k/4)}</text>`; }
+  months.forEach((m,i)=>{
+    const x = L+step*i+(step-bw)/2, h = ih*vals[i]/mx, y=T+ih-h, on = i>=from&&i<=to;
+    s+=`<rect class="bar" data-tip="<b>${mLong(m)}</b><br>${peso(vals[i])}" x="${x}" y="${y}" width="${bw}" height="${Math.max(h,0)}" rx="4" fill="${on?'var(--accent)':'var(--accent-soft)'}"/>`;
+    s+=`<text class="t" x="${x+bw/2}" y="${H-10}" text-anchor="middle">${mLabel(m)}</text>`;
+  });
+  if (vals[peakI]>0) s+=`<text class="tv" x="${L+step*peakI+step/2}" y="${T+ih-ih*vals[peakI]/mx-6}" text-anchor="middle">🔥 ${short(vals[peakI])}</text>`;
+  s+='</svg>';
+  const el=document.getElementById('ch-month'); el.innerHTML=s; bindTip(el);
+}
+
+/* Horizontal bars (vendedor, categoría) */
+function renderBars(id,key){
+  const rows = rowsFor(key);
+  const agg = uniq(key).map(k=>({k,val:sum(rows.filter(d=>d[key]===k))})).sort((a,b)=>b.val-a.val);
+  const W=420,rowH=44,L=122,R=70,H=agg.length*rowH+4, mx=Math.max(...agg.map(a=>a.val),1);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ventas por ${DIMS[key].toLowerCase()}">`;
+  agg.forEach((a,i)=>{
+    const y=i*rowH+6, w=(W-L-R)*a.val/mx, on=!sel[key].size||sel[key].has(a.k);
+    s+=`<text class="t" style="fill:var(--ink);font-size:12px" x="0" y="${y+14}">${key==='c'?CAT_ICO[a.k]+' ':(rows.length&&a.val>0?VEN_ICO[i]+' ':'')}${esc(a.k)}</text>`;
+    s+=`<rect x="${L}" y="${y}" width="${W-L-R}" height="20" rx="5" fill="var(--none)"/>`;
+    s+=`<rect class="bar" data-k="${key}" data-val="${esc(a.k)}" data-tip="<b>${esc(a.k)}</b><br>${peso(a.val)}<br>${(a.val/(sum(rows)||1)*100).toFixed(1)}% del total" x="${L}" y="${y}" width="${Math.max(w,2)}" height="20" rx="5" fill="${on?'var(--accent)':'var(--accent-soft)'}"/>`;
+    s+=`<text class="tv" x="${W}" y="${y+14}" text-anchor="end">${short(a.val)}</text>`;
+  });
+  s+='</svg>';
+  const el=document.getElementById(id); el.innerHTML=s; bindTip(el); bindClicks(el);
+}
+
+/* Ticket ranges donut (same 30 mil bins as the original workbook) */
+const BIN0 = 699.03, BINW = 30000, NB = 5;
+const binName = i => `${short(BIN0+BINW*i).replace(' mil','k')} – ${short(BIN0+BINW*(i+1)).replace(' mil','k')}`;
+function renderTicket(){
+  const rows = rowsFor('t');
+  const bins = Array.from({length:NB},(_,i)=>({i,val:0,n:0}));
+  rows.forEach(d=>{ const i=Math.min(NB-1,Math.floor((d.i-BIN0)/BINW)); bins[i].val+=d.i; bins[i].n++; });
+  const tot = sum(rows), n = rows.length, cx=90, cy=90, r=66, sw=26, C=2*Math.PI*r;
+  let off=0, s=`<svg viewBox="0 0 180 180" style="max-width:210px;margin:0 auto" role="img" aria-label="Ventas por rango de ticket"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--none)" stroke-width="${sw}"/>`;
+  bins.forEach(b=>{ if(!b.val) return; const len=C*b.val/tot;
+    s+=`<circle data-tip="<b>${binName(b.i)}</b><br>${peso(b.val)} · ${b.n} pedidos" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--r${b.i+1})" stroke-width="${sw}" stroke-dasharray="${Math.max(len-1.5,0.1)} ${C}" stroke-dashoffset="${-off}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    off+=len; });
+  s+=`<text class="t" x="${cx}" y="${cy-6}" text-anchor="middle">Ticket promedio</text><text x="${cx}" y="${cy+16}" text-anchor="middle" style="fill:var(--ink);font:700 18px var(--f-display)">${n?short(tot/n):'$0'}</text></svg>`;
+  s+=`<div class="legend">`+bins.map(b=>`<div><i style="background:var(--r${b.i+1})"></i><span>${binName(b.i)}</span><span class="pct">${tot?(b.val/tot*100).toFixed(0):0}%</span><b>${short(b.val)}</b></div>`).join('')+`</div>`;
+  const el=document.getElementById('ch-ticket'); el.innerHTML=s; bindTip(el);
+}
+
+/* Tile map of Mexico (one square per state, laid out roughly like the country) */
+const TILES = {
+ 'Baja California':[0,0,'BC'],'Sonora':[1,0,'SON'],'Chihuahua':[2,0,'CHH'],'Coahuila':[3,0,'COA'],'Nuevo León':[4,0,'NL'],'Tamaulipas':[5,0,'TAM'],
+ 'Baja California Sur':[0,1,'BCS'],'Sinaloa':[1,1,'SIN'],'Durango':[2,1,'DGO'],'Zacatecas':[3,1,'ZAC'],'San Luis Potosí':[4,1,'SLP'],
+ 'Nayarit':[1,2,'NAY'],'Jalisco':[2,2,'JAL'],'Aguascalientes':[3,2,'AGS'],'Guanajuato':[4,2,'GTO'],'Querétaro':[5,2,'QRO'],'Hidalgo':[6,2,'HGO'],'Veracruz':[7,2,'VER'],
+ 'Colima':[1,3,'COL'],'Michoacán':[2,3,'MICH'],'Estado de México':[3,3,'MEX'],'Ciudad de México':[4,3,'CDMX'],'Morelos':[5,3,'MOR'],'Tlaxcala':[6,3,'TLX'],'Puebla':[7,3,'PUE'],'Tabasco':[8,3,'TAB'],'Campeche':[9,3,'CAM'],'Yucatán':[10,3,'YUC'],'Quintana Roo':[11,3,'QROO'],
+ 'Guerrero':[3,4,'GRO'],'Oaxaca':[6,4,'OAX'],'Chiapas':[8,4,'CHIS']
+};
+function renderMap(){
+  const rows = rowsFor('e'), by = {};
+  rows.forEach(d=>by[d.e]=(by[d.e]||0)+d.i);
+  const mx = Math.max(...Object.values(by),1), T=44, G=4, W=12*T, H=5*T;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ventas por estado">`;
+  Object.entries(TILES).forEach(([name,[c,r,ab]])=>{
+    const x=c*T+G/2, y=r*T+G/2, w=T-G, v=by[name]||0, has = DATA.some(d=>d.e===name);
+    const lvl = v? Math.min(4,Math.floor(v/mx*4.999)) : -1;
+    const fill = v? `var(--r${lvl+1})` : 'var(--none)';
+    const dark = lvl>=2 && !(matchMedia('(prefers-color-scheme: dark)').matches||document.documentElement.dataset.theme==='dark') || (lvl>=3);
+    const picked = sel.e.has(name);
+    const tx = v ? (lvl>=3 ? 'var(--surface)' : 'var(--ink)') : 'var(--muted)';
+    s+=`<g class="tile ${has?'has':''}" ${has?`data-k="e" data-val="${esc(name)}"`:''} data-tip="<b>${name}</b><br>${v?peso(v):(has?'Sin ventas con estos filtros':'Sin ventas registradas')}">`+
+       `<rect x="${x}" y="${y}" width="${w}" height="${w}" rx="6" fill="${fill}" stroke="${picked?'var(--warn)':'none'}" stroke-width="2.5"/>`+
+       `<text x="${x+w/2}" y="${y+w/2+(v?-1:4)}" text-anchor="middle" style="font:700 ${ab.length>3?9:10.5}px var(--f-body);fill:${tx}">${ab}</text>`+
+       (v?`<text x="${x+w/2}" y="${y+w/2+11}" text-anchor="middle" style="font:500 8.5px var(--f-body);fill:${tx}">${short(v).replace(' mil','k').replace('$','')}</text>`:'')+`</g>`;
+  });
+  s+='</svg>';
+  const el=document.getElementById('ch-map'); el.innerHTML=s; bindTip(el); bindClicks(el);
+}
+
+function render(){
+  document.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',sel[b.dataset.k].has(b.dataset.val)));
+  const rows = rowsFor();
+  document.getElementById('reset').disabled = !(Object.values(sel).some(s=>s.size)||from!==0||to!==months.length-1);
+  document.getElementById('sub').textContent = `${mLong(months[from])} a ${mLong(months[to])} · ${rows.length} de ${DATA.length} pedidos${sel.e.size?' · Estados: '+[...sel.e].join(', '):''}`;
+  renderKpis(rows); renderMonth(); renderMap();
+  renderBars('ch-vend','v'); renderBars('ch-cat','c'); renderTicket();
+}
+buildFilters(); render();
+</script>
+
+</body></html>
